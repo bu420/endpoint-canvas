@@ -1,0 +1,76 @@
+@font-face {
+    font-family: "JetBrains Mono";
+    src: url("JetBrainsMono-2.242/fonts/ttf/JetBrainsMono-Light.ttf");
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background-color: whitesmoke;
+}
+
+#title {
+    font-family: "JetBrains Mono";
+    background-color: #BD0019;
+    color: whitesmoke;
+    margin: 0;
+}
+
+#title #header {
+    margin: 0;
+    padding: 0;
+    font-weight: lighter;
+    /* It looked a bit off before this. */
+    margin-left: -0.15vw;
+}
+
+#title #subtitle {
+    margin: 0;
+    padding: 0;
+}
+
+#canvas {
+    background-color: whitesmoke;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+
+/* Phones. */
+@media only screen and (max-width: 500px) {
+    #title {
+        padding: 1vw;
+        /* padding-top: 8vw; */
+    }
+
+    #title #header {
+        font-size: 6vw;
+    }
+
+    #title #subtitle {
+        font-size: 3.5vw;
+    }
+}
+
+/* Laptops/desktops. */
+@media only screen and (min-width: 500px) {
+    #title {
+        padding: 10px;
+        display: inline-block;
+    }
+
+    #title #header {
+        font-size: 2vw;
+    }
+
+    #title #subtitle {
+        font-size: 0.8vw;
+    }
+}
