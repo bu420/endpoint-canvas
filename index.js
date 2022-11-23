@@ -1,11 +1,11 @@
-require('dotenv').config()
 const express = require('express')
 const app = express()
 const server = require('http').createServer(app)
 const io = require('socket.io')(server)
 const uuid = require('uuid')
-const port = process.env.PORT
-const size = process.env.SIZE
+
+const port = 2000
+const size = 64
 
 let users = {}
 let grid = {}
