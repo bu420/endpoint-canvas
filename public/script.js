@@ -26,21 +26,21 @@ const palette = ["#000000", "#9D9D9D", "#FFFFFF", "#BE2633", "#E06F8B", "#493C2B
 
 let grid = {}
 
-function putPixel(x, y, color, name) {
+function putPixel(x, y, color) {
     if (!grid.hasOwnProperty(x)) {
         grid[x] = {}
     }
 
-    grid[x][y] = {color: color, name: name}
+    grid[x][y] = {color: color}
 }
 
 socket.on('initial', initialData => {
     initialData.cells.forEach(cell => {
-        putPixel(cell.x, cell.y, cell.color, cell.name)
+        putPixel(cell.x, cell.y, cell.color)
     })
     
     socket.on('update', updateData => {
-        putPixel(updateData.x, updateData.y, updateData.color, updateData.name)
+        putPixel(updateData.x, updateData.y, updateData.color)
     })
 
     const size = initialData.size

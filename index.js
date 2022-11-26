@@ -1,11 +1,25 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const server = require('http').createServer(app)
 const io = require('socket.io')(server)
 const uuid = require('uuid')
+const DiscordOauth2 = require('discord-oauth2')
+const oauth = new DiscordOauth2()
 
-const port = 2000
-const size = 64
+const port = process.env.PORT
+const size = process.env.CANVAS_SIZE
+const clientID = process.env.DISCORD_CLIENT_ID
+const clientSecret = process.env.DISCORD_CLIENT_SECRET
+
+class User {
+    static cooldown = 10 * 1000
+
+    constructor(discordAccessToken) {
+        this.discordAccessToken = discordAccessToken
+        this.timestamp = null
+    }
+}
 
 let users = {}
 let grid = {}
@@ -19,10 +33,8 @@ function putPixel(token, x, y, color) {
 }
 
 function validateToken(str) {
-    if (str) {
-        if (users.hasOwnProperty(str)) {
-            return {valid: true, value: str}
-        }
+    if (users.hasOwnProperty(str)) {
+        return {valid: true, value: str}
     }
     return {valid: false, value: null}
 }
@@ -65,17 +77,47 @@ function validateColor(str) {
 
 app.use(express.static(__dirname + '/public'))
 
-// example.com/create-account?name=<string>
-app.get('/create-account', (req, res) => {
-    const name = validateString(req.query.name)
-    if (!name.valid) {
-        res.json({error: `Invalid or missing parameter 'name'.`})
-        return
-    }
+app.get('/token', async (req, res) => {
+    const code = req.query.code
 
-    let token = uuid.v4()
-    users[token] = name.value
-    res.json({token: token, name: name.value})
+    oauth.tokenRequest({
+        clientId: clientID,
+        clientSecret: clientSecret,
+        code: code,
+        grantType: 'authorization_code',
+        redirectUri: 'http://localhost:2000/token'
+    }).then(response => {
+        const discordAccessToken = response.access_token
+
+        // Generate token associated solely with this api.
+        let token = uuid.v4()
+
+        // Remove any previous tokens for this user.
+        for (let [t, user] of Object.entries(users)) {
+            if (discordAccessToken == user.discordAccessToken) {
+                delete users[t]
+            }
+        }
+
+        // Put user in lookup table.
+        users[token] = new User(discordAccessToken)
+
+        res.send(token)
+    }).catch(err => {
+        res.send('error')
+    })
+})
+
+// example.com/test?token=<string>
+app.get('/test', async (req, res) => {
+    const token = req.query.token
+    const discordAccessToken = users[token].discordAccessToken
+
+    oauth.getUser(discordAccessToken).then(user => {
+        res.send(`hello ${user.username}.`)
+    }).catch(() => {
+        res.send('error')
+    })
 })
 
 // example.com/put-pixel?token=<string>?x=<int>?y=<int>?color=<int>
@@ -85,14 +127,24 @@ app.get('/put-pixel', (req, res) => {
     const y = validateCoord(req.query.y)
     const color = validateColor(req.query.color)
 
-    if (token.valid && x.valid && y.valid && color.valid) {
-        putPixel(token.value, x.value, y.value, color.value)
-        res.send('success')
-        io.emit('update', {x: x.value, y: y.value, color: color.value, name: users[token.value]})
-        return
-    }
-
     let errors = []
+
+    if (token.valid && x.valid && y.valid && color.valid) {
+        let user = users[token.value]
+        let now = performance.now()
+
+        if (user.timestamp == null || now - user.timestamp >= User.cooldown) {
+            putPixel(token.value, x.value, y.value, color.value)
+            user.timestamp = now
+
+            io.emit('update', {x: x.value, y: y.value, color: color.value})
+            res.send('success')
+            return
+        }
+        else {
+            errors.push(`Cooldown ${((User.cooldown - (now - user.timestamp)) / 1000).toFixed(1)}s.`)
+        }
+    }
 
     if (!token.valid)
         errors.push(`Invalid or missing parameter 'token'.`)
@@ -111,7 +163,7 @@ io.on('connection', (socket) => {
 
     for (const [x, col] of Object.entries(grid)) {
         for (const [y, cell] of Object.entries(col)) {
-            cells.push({x: x, y: y, color: cell.color, name: users[cell.token]})
+            cells.push({x: x, y: y, color: cell.color})
         }
     }
 
