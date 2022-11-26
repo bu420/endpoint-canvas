@@ -6,6 +6,8 @@ const io = require('socket.io')(server)
 const uuid = require('uuid')
 const DiscordOauth2 = require('discord-oauth2')
 const oauth = new DiscordOauth2()
+const sqlite3 = require('sqlite3')
+const cb = new sqlite3.Database('.db')
 
 const port = process.env.PORT
 const size = process.env.CANVAS_SIZE
@@ -13,7 +15,7 @@ const clientID = process.env.DISCORD_CLIENT_ID
 const clientSecret = process.env.DISCORD_CLIENT_SECRET
 
 class User {
-    static cooldown = 10 * 1000
+    static cooldown = process.env.COOLDOWN
 
     constructor(discordAccessToken) {
         this.discordAccessToken = discordAccessToken
